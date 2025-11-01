@@ -1,5 +1,5 @@
 import streamlit as st
-from PIL import Image, ImageGrab
+from PIL import Image
 import numpy as np
 import easyocr
 import pyperclip
@@ -15,7 +15,7 @@ def load_ocr():
 
 reader = load_ocr()
 
-# Pilih input: Upload atau Clipboard (Windows)
+# Pilih input: Upload atau Clipboard (Windows lokal)
 input_type = st.radio("Pilih sumber gambar:", ("Upload File", "Clipboard"))
 
 image = None
@@ -28,9 +28,10 @@ if input_type == "Upload File":
 
 elif input_type == "Clipboard":
     if platform.system() != "Windows":
-        st.warning("Clipboard hanya didukung di Windows.")
+        st.warning("Clipboard hanya didukung di Windows. Silakan gunakan Upload File.")
     else:
         if st.button("Ambil gambar dari Clipboard"):
+            from PIL import ImageGrab
             image = ImageGrab.grabclipboard()
             if image is None:
                 st.warning("Clipboard tidak berisi gambar.")
@@ -39,12 +40,12 @@ elif input_type == "Clipboard":
 if image is not None:
     st.image(image, caption="Gambar yang dipilih", use_container_width=True)
 
-    # Resize agresif untuk OCR cepat
+    # Resize gambar untuk OCR cepat
     max_side = 800
     width, height = image.size
     scale = min(max_side / width, max_side / height, 1)
     if scale < 1:
-        new_size = (int(width*scale), int(height*scale))
+        new_size = (int(width * scale), int(height * scale))
         image = image.resize(new_size, Image.Resampling.LANCZOS)
 
     # Convert ke numpy array
@@ -54,17 +55,17 @@ if image is not None:
     results = reader.readtext(img_np, detail=0)
     text = "\n".join(results)
 
-    # Simpan hasil OCR ke session_state untuk menghindari reset
+    # Simpan hasil OCR di session_state
     st.session_state.ocr_text = text
 
-    # Tampilkan hasil
+    # Tampilkan hasil OCR
     st.subheader("Hasil OCR:")
     st.text_area("Teks yang terbaca:", text, height=200, key="ocr_text_display")
 
     # Tombol copy ke clipboard (lokal)
     if st.button("📋 Salin ke Clipboard"):
         try:
-            pyperclip.copy(st.session_state.ocr_text)  # Salin dari session_state
+            pyperclip.copy(st.session_state.ocr_text)
             st.success("Teks berhasil dicopy ke clipboard!")
         except Exception as e:
             st.error(f"Gagal copy ke clipboard: {e}")
